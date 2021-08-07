@@ -1,0 +1,12 @@
+{
+  "domain": "lan_smartthings",
+  "name": "lan_smartthings",
+  "version" : "4.0.0",
+  "config_flow": true,
+  "documentation": "https://github.com/bogusfocused/ha_lan_smartthings",
+  "requirements": [],
+  "dependencies": ["webhook","zeroconf","http", "network","smartthings"],
+  "codeowners": ["@bogusfocussed"],
+  "iot_class": "cloud_push",
+  "zeroconf": ["_smartthings._tcp.local."]
+}

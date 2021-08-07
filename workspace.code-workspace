@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.yaml": "yaml"
+		},
+		"python.analysis.diagnosticMode": "workspace"
+	}
+}

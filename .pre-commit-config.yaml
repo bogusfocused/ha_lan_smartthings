@@ -1,0 +1,41 @@
+default_language_version:
+  python: python3.9
+default_stages: [commit]
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.5.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.23.3
+    hooks:
+      - id: pyupgrade
+  - repo: local
+    hooks:
+      - id: revert_gitignore
+        name: Revert .gitignore
+        entry: git checkout HEAD -- .gitignore
+        pass_filenames: false
+        language: system 
+        always_run: true
+        verbose: true
+        stages: [merge-commit]
+      - id: apply_gitignore
+        name: apply gitignore
+        entry: poetry run python tools/hooks/force_gitignore.py
+        args: [-b, github]
+        pass_filenames: false
+        language: system 
+        always_run: true
+        verbose: true
+      - id: check_gitignore_is_applied
+        name: check gitignore is applied
+        entry: poetry run python tools/hooks/force_gitignore.py
+        args: [--check-only, -p, ".*"]
+        pass_filenames: false
+        language: system
+        always_run: true
+        verbose: true
+        stages: [push]

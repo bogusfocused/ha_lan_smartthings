@@ -1,0 +1,19 @@
+name: Zip files
+permissions: write-all
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: bump_version
+        run: ./.github/bump_version_and_tag.sh
+        env:
+          GITHUB_USER: ${{ github.actor	 }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
