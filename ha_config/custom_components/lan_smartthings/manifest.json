@@ -1,7 +1,7 @@
 {
   "domain": "lan_smartthings",
   "name": "Control SmartThings on LAN",
-  "version" : "4.0.0",
+  "version" : "0.0.2",
   "config_flow": true,
   "documentation": "https://github.com/bogusfocused/ha_lan_smartthings",
   "issue_tracker":"https://github.com/bogusfocused/ha_lan_smartthings/issues",
