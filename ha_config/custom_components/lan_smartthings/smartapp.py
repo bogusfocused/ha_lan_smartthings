@@ -92,4 +92,4 @@ async def _smartapp_webhook(hass: HomeAssistant, webhook_id: str, request : Clie
 
 smartapp_webhook = _smartapp_webhook
 
-get_webhook_url = lambda hass: hass.data.get(DOMAIN,{}).get(CONF_TARGET_URL,None)
+get_webhook_url = lambda hass: hass.data[DOMAIN][CONF_TARGET_URL]

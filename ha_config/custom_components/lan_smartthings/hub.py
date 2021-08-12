@@ -117,9 +117,7 @@ class HubInfo():
         hass.data[DOMAIN][CONF_TARGET_URL] = info._target_url
         return info
         
-    @property
-    def targeturl(self):
-        return self._target_url
+
 
 
 class Hub():
@@ -160,7 +158,9 @@ class Hub():
         if info._access_token != access_token:
             info._access_token = access_token
             await info.save()
-        return cls(hass, info=info, lan_host=lan_host)
+        ret = cls(hass, info=info, lan_host=lan_host)
+        hass.data[DOMAIN][CONF_TARGET_URL] =  ret.targeturl
+        return ret
 
     @classmethod
     async def setup(cls, *, hass: HomeAssistant, app: _AppInfo, servername: str):
@@ -179,7 +179,9 @@ class Hub():
                        access_token=access_token,
                        targeturl_base=targeturl_base, cloud_webhook_id=cloud_webhook_id, instance_id=instance_id)
         await info.save()
-        return cls(hass, info=info, lan_host=lan_host)
+        ret = cls(hass, info=info, lan_host=lan_host)
+        hass.data[DOMAIN][CONF_TARGET_URL] =  ret.targeturl
+        return ret
 
     @classmethod
     async def _register(cls, hass: HomeAssistant, *, lan_webhook_id: str, hub_url: str, hub_ip: str, cloud_webhook_id: str):
@@ -218,7 +220,9 @@ class Hub():
         await self.post("command", {"command": command,
                                     "device_id": device_id, "args": args})
 
-
+    @property
+    def targeturl(self):
+        return self._info._target_url
 
     @property
     def cloud_webhook_id(self):
