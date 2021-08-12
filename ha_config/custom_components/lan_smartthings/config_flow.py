@@ -113,6 +113,7 @@ class LanSmartThingsFlowHandler(SmartThingsFlowHandler, ForwardProtocol):
             locations_options = {
                 app["id"]: f'{app["label"]} @ {app["location"]["name"]}' for app in self.apps.apps}
             if len(locations_options) == 1:
+                user_input = user_input or {}
                 user_input[CONF_APP_ID] = locations_options.keys()[0]
             else:
                 return self.async_show_form(
