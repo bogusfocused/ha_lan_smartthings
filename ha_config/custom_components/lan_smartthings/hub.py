@@ -1,12 +1,15 @@
 """SmartApp functionality to receive cloud-push notifications."""
 import asyncio
 import logging
+import sys
 from typing import Any, Callable, Coroutine, Dict, Generic, List, Mapping, NamedTuple, Optional, TypeVar, TypedDict, cast
 from uuid import uuid4
 
 from aiohttp import hdrs
+from aiohttp.client import ClientTimeout
 from aiohttp.web import Request
-from .smartthings.const import CONF_CLOUDHOOK_URL, CONF_INSTANCE_ID
+from pysmartthings.app import APP_TYPE_WEBHOOK, CLASSIFICATION_AUTOMATION
+from .smartthings.const import APP_NAME_PREFIX, CONF_CLOUDHOOK_URL, CONF_INSTANCE_ID
 from homeassistant.components.network.util import async_get_source_ip
 from homeassistant.const import CONF_WEBHOOK_ID
 from homeassistant.core import HomeAssistant
@@ -15,7 +18,6 @@ from homeassistant.helpers.storage import Store
 from pysmartapp.const import EVENT_TYPE_DEVICE
 from pysmartapp.event import EventRequest
 import homeassistant.components.webhook as webhook
-
 from .const import (CONF_CLOUD_CALLBACK_WEBHOOK_ID, CONF_HUB_ACCESS_TOKEN, CONF_HUB_IP, CONF_HUB_URL, CONF_LAN_CALLBACK_WEBHOOK_ID, CONF_TARGET_URL, CONF_TARGET_URL_BASE, DOMAIN, STORAGE_KEY, STORAGE_VERSION,  # type: ignore
                     USER_AGENTv1)
 
@@ -56,6 +58,7 @@ class _AppInfo(TypedDict):
     label: str
     location: _Location
     smartAppVersion: _SmartAppVersion
+
 
 class _SmartApps(NamedTuple):
     apps: List[_AppInfo]
@@ -114,10 +117,8 @@ class HubInfo():
                        targeturl_base=local_hub[CONF_TARGET_URL_BASE],
                        instance_id=local_hub[CONF_INSTANCE_ID],
                        )
-        hass.data[DOMAIN][CONF_TARGET_URL] = info._target_url
-        return info
-        
 
+        return info
 
 
 class Hub():
@@ -159,7 +160,7 @@ class Hub():
             info._access_token = access_token
             await info.save()
         ret = cls(hass, info=info, lan_host=lan_host)
-        hass.data[DOMAIN][CONF_TARGET_URL] =  ret.targeturl
+        ret.patch_methods()       
         return ret
 
     @classmethod
@@ -180,8 +181,23 @@ class Hub():
                        targeturl_base=targeturl_base, cloud_webhook_id=cloud_webhook_id, instance_id=instance_id)
         await info.save()
         ret = cls(hass, info=info, lan_host=lan_host)
-        hass.data[DOMAIN][CONF_TARGET_URL] =  ret.targeturl
+        ret.patch_methods()
         return ret
+
+    def patch_methods(self):
+        smartapp = sys.modules['custom_components.lan_smartthings.smartthings.smartapp']
+        def patched_get_app_template(hass: HomeAssistant):
+            return {
+                    "app_name": APP_NAME_PREFIX + str(uuid4()),
+                    "display_name": "Home Assistant",
+                    "description": f"{hass.config.location_name} at {self.targeturl}",
+                    "webhook_target_url": self.targeturl,
+                    "app_type": APP_TYPE_WEBHOOK,
+                    "single_instance": True,
+                    "classifications": [CLASSIFICATION_AUTOMATION],
+                }
+        smartapp._get_app_template = patched_get_app_template
+        smartapp.get_webhook_url = lambda hass: self.targeturl
 
     @classmethod
     async def _register(cls, hass: HomeAssistant, *, lan_webhook_id: str, hub_url: str, hub_ip: str, cloud_webhook_id: str):
@@ -285,12 +301,19 @@ class Hub():
 
     @staticmethod
     async def _post(*, hass: HomeAssistant, url: str, action: str, data: Any = None):
+        to = ClientTimeout(total=5.0)
         session = async_get_clientsession(hass)
         headers = {hdrs.USER_AGENT: USER_AGENTv1, "Action": action}
-        async with session.request(
-            "POST", url,
-            headers=headers,
-            raise_for_status=True,
-            json=data,
-        ) as resp:
-            await resp.text()
+        attempt = 0
+        max_attempt = 5
+        while attempt < max_attempt:
+            try:
+                async with session.request("POST", url, headers=headers, json=data,timeout=to) as resp:
+                    result = await resp.text()
+                    return
+            except asyncio.TimeoutError:
+                attempt+=1
+                await asyncio.sleep(2)
+            except Exception as exc:
+                _LOGGER.error(exc)
+                raise

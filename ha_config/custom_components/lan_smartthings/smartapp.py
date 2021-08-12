@@ -2,10 +2,11 @@
 from .const import CLASSIC_APP_NAME, CONF_TARGET_URL, DOMAIN
 from .smartthings.const import DATA_MANAGER
 from .smartthings.smartapp import *
+import sys
 from typing import Any, Dict, List, Tuple
 import logging
 from homeassistant.core import HomeAssistant
-from aiohttp.client import ClientSession,ClientRequest
+from aiohttp.client import ClientSession, ClientRequest
 import aiohttp.web as web
 from pysmartapp.smartapp import SmartAppManager
 from .hub import _AppInfo, _SmartApps
@@ -27,9 +28,12 @@ PAT = r'<td>.*href="\/installedSmartApp\/show\/([-a-f0-9]*)"[^>]*>(.*)[^<]<.*<\/
 
 INSTALATIONS = "https://{servername}.api.smartthings.com:443/api/smartapps/installations"
 INSTALATION_STATE = "https://{servername}.api.smartthings.com:443/installedSmartApp/showModal/{appid}"
-INSTALL_STATE_PATTERN = re.compile(r'.*(?<=<h4>Application State<\/h4>)(.*)', re.DOTALL)
+INSTALL_STATE_PATTERN = re.compile(
+    r'.*(?<=<h4>Application State<\/h4>)(.*)', re.DOTALL)
 STATE_BODY = re.compile('.*(?<=<tbody>)(.*)(?=<\\/tbody>).*', re.DOTALL)
-PROP_PATTERN =  re.compile(r'<tr>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>', re.DOTALL)
+PROP_PATTERN = re.compile(
+    r'<tr>\s*<td>(.*?)<\/td>\s*<td>(.*?)<\/td>\s*<\/tr>', re.DOTALL)
+
 
 async def classic_smartapps(session: ClientSession, access_token: str) -> _SmartApps:
     async with session.request(
@@ -64,32 +68,19 @@ async def classic_smartapps(session: ClientSession, access_token: str) -> _Smart
         ) as resp:
             html = await resp.text()
         try:
-            app_state = PROP_PATTERN.findall(STATE_BODY.match(INSTALL_STATE_PATTERN.match(html)[1])[1])
+            app_state = PROP_PATTERN.findall(STATE_BODY.match(
+                INSTALL_STATE_PATTERN.match(html)[1])[1])
             props = {k: v for k, v in app_state}
             properties[capps["id"]] = props
         except:
             pass
     return _SmartApps(classic_apps, loc_server_map, properties)
 
+validate_webhook_requirements = lambda *args, **kwargs: True
 
-def _validate_webhook_requirements(*args, **kwargs) -> bool:
-    '''suppress validation of webhook as we are not going to use it.'''
-    return True
+_handle_request = SmartAppManager.handle_request 
+async def handle_request(self, data: dict, headers: dict = None,
+                            validate_signature: bool = True) -> dict:
+        return await _handle_request(self,data,headers,validate_signature=False)
 
-validate_webhook_requirements = _validate_webhook_requirements
-
-async def _smartapp_webhook(hass: HomeAssistant, webhook_id: str, request : ClientRequest):
-    """
-    Handle a smartapp lifecycle event callback from SmartThings.
-
-    Requests from SmartThings are digitally signed and the SmartAppManager
-    validates the signature for authenticity.
-    """
-    manager : SmartAppManager = hass.data[DOMAIN][DATA_MANAGER]
-    data = await request.json()
-    result = await manager.handle_request(data, request.headers, validate_signature=False)
-    return web.json_response(result)
-
-smartapp_webhook = _smartapp_webhook
-
-get_webhook_url = lambda hass: hass.data[DOMAIN][CONF_TARGET_URL]
+SmartAppManager.handle_request  = handle_request
