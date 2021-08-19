@@ -133,7 +133,7 @@ class Hub():
         self._broker_event_handler: Optional[BrokerHandler] = None
         self._installed_app_id: Optional[str] = None
 
-    async def start(self, handler: BrokerHandler, installed_app_id: str):
+    def start(self, handler: BrokerHandler, installed_app_id: str):
         info = self._info
         if self._broker_event_handler:
             # skip because already started

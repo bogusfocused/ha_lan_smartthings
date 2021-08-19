@@ -1,6 +1,8 @@
 import sys
 from .package_finder import RedirectPackageFinder
 sys.meta_path.insert(0, RedirectPackageFinder())
+
+
 from .const import DOMAIN
 from .smartthings.const import CONF_INSTALLED_APP_ID
 
@@ -15,15 +17,15 @@ from .smartthings import (async_setup as origin_async_setup,
 from .smartthings import DeviceBroker
 from pysmartthings import DeviceEntity
 from .hub import Hub
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 import logging
+
 _LOGGER = logging.getLogger(__name__)
 
 
 def command(hub: Hub):
-    async def wrapper(self: DeviceEntity, component_id: str, capability, command, args=None) -> bool:
+    async def wrapper(self: DeviceEntity, _component_id: str, _capability, command, args=None) -> bool:
         """Execute a command on the device."""
         await hub.execute_command(self.device_id, command, args)
         return True
@@ -46,7 +48,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     hub = await Hub.load(hass=hass)
     DeviceEntity.command = command(hub)
     setattr(broker, "_hub", hub)
-    await hub.start(lambda x: broker._event_handler(x, None, None), entry.data[CONF_INSTALLED_APP_ID])
+    hub.start(lambda x: broker._event_handler(x, None, None), entry.data[CONF_INSTALLED_APP_ID])
     return return_value
 
 

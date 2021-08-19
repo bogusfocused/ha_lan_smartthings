@@ -1,25 +1,35 @@
-"""SmartApp functionality to receive cloud-push notifications."""
-from .const import CLASSIC_APP_NAME, CONF_TARGET_URL, DOMAIN
-from .smartthings.const import DATA_MANAGER
+"""Smartapp patch."""
+
+validate_webhook_requirements = lambda *args, **kwargs: True
+
+import importlib
+proxy = importlib.import_module(".smartthings.smartapp", __package__)
+common = set(dir()) & set(dir(proxy))
+for a in [a for a in common if not a.startswith('__')]:
+    setattr(proxy, a, locals()[a])
+
 from .smartthings.smartapp import *
-import sys
-from typing import Any, Dict, List, Tuple
-import logging
-from homeassistant.core import HomeAssistant
-from aiohttp.client import ClientSession, ClientRequest
-import aiohttp.web as web
+
+
 from pysmartapp.smartapp import SmartAppManager
+_handle_request = SmartAppManager.handle_request
+async def handle_request(self, data: dict, headers: dict = None,
+                         validate_signature: bool = True) -> dict:
+    return await _handle_request(self, data, headers, validate_signature=False)
+
+SmartAppManager.handle_request = handle_request
+
+
+from .const import CLASSIC_APP_NAME
+from typing import Dict, List, Tuple
+import logging
+from aiohttp.client import ClientSession
 from .hub import _AppInfo, _SmartApps
 import re
+
+
 _LOGGER = logging.getLogger(__name__)
 
-
-class Error(Exception):
-    pass
-
-
-class ApplicationNotFoundError(Error):
-    pass
 
 
 PATTERN = r'\"https:\/\/([^\.]*)\.api\.smartthings\.com:443\/location\/installedSmartApps\/([-a-f0-9]*)\"'
@@ -75,12 +85,3 @@ async def classic_smartapps(session: ClientSession, access_token: str) -> _Smart
         except:
             pass
     return _SmartApps(classic_apps, loc_server_map, properties)
-
-validate_webhook_requirements = lambda *args, **kwargs: True
-
-_handle_request = SmartAppManager.handle_request 
-async def handle_request(self, data: dict, headers: dict = None,
-                            validate_signature: bool = True) -> dict:
-        return await _handle_request(self,data,headers,validate_signature=False)
-
-SmartAppManager.handle_request  = handle_request

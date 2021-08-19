@@ -1,7 +1,4 @@
 """Constants used by the SmartThings component and platforms."""
-import importlib
-cst = importlib.import_module(".smartthings.const", __package__)
-
 
 DOMAIN = "lan_smartthings"
 SIGNAL_SMARTTHINGS_UPDATE = "lan_smartthings_update"
@@ -18,8 +15,10 @@ CONF_TARGET_URL = "target_url"
 CONF_APP_ID = "app_id"
 USER_AGENTv1 = "HA ST Link/1.0"
 
-common = set(dir()) & set(dir(cst))
-for a in [a for a in common if not a.startswith('__') and not callable(getattr(cst, a))]:
-    setattr(cst,a,locals()[a])
+import importlib
+proxy = importlib.import_module(".smartthings.const", __package__)
+common = set(dir()) & set(dir(proxy))
+for a in [a for a in common if not a.startswith('__')]:
+    setattr(proxy, a, locals()[a])
 
 from .smartthings.const import *
