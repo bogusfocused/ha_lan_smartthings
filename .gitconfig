@@ -1,6 +1,0 @@
-[alias]
-    apply-gitignore = "!f() { git ls-files -ci --exclude-standard | xargs -r -I ARGS sh -c 'git rm --cached ARGS; rm ARGS';  }; f"
-    revert-gitignore = "!f() { git checkout HEAD -- .gitignore; }; f"
-    merge-code = "!f() { git merge -s recursive -X theirs --no-commit -v --allow-unrelated-histories $1; }; f"
-    safe-push = "!f() { git commit && git push github main:main; }; f"
-    safe-publish = "!f() { git checkout main && git merge-code $1 &&  git revert-gitignore && git apply-gitignore && git safe-push && git checkout $1;}; f"

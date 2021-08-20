@@ -1,0 +1,19 @@
+#!/bin/sh
+#
+# Revert .gitignore, apply .gitignore and delete ignored files.
+# To update .gitignore use no-verify
+#
+
+
+if git rev-parse --verify HEAD >/dev/null 2>&1
+then
+	against=HEAD
+else
+	# Initial commit: diff against an empty tree object
+	against=$(git hash-object -t tree /dev/null)
+fi
+
+# revert .gitignore
+git checkout $against -- .gitignore
+# apply .gitignore and delete ignored files
+git ls-files -ci --exclude-standard | xargs -r -I ARGS sh -c 'git rm --cached ARGS; rm ARGS'
